@@ -1,0 +1,25 @@
+# API
+fastapi
+uvicorn
+
+# ML / Vision
+torch
+transformers
+accelerate
+peft
+bitsandbytes
+
+# LangChain / Agents
+langchain
+langgraph
+langchain-community
+
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Utilities
+python-multipart
+python-dotenv
+Pillow
+pdf2image
