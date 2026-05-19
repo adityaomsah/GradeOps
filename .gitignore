@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#gitkeep for the uploads and images folders
+backend/ocr/uploads/*
+backend/ocr/images/*
+!backend/ocr/uploads/.gitkeep
+!backend/ocr/images/.gitkeep
