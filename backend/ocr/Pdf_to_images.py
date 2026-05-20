@@ -13,7 +13,7 @@ def pdf_to_image(pdf_path: str, output_save_folder: str, pdf_name: str) -> list:
 
     image_paths = []
     for i,image in enumerate(images):
-        file_name = f"{pdf_name}page{i+1}.png"
+        file_name = f"{pdf_name}_page_{i+1}.png"
         full_path = os.path.join(final_save, file_name)
         image.save(full_path, "PNG")
         image_paths.append(full_path)
