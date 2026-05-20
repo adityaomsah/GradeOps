@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from backend.api.routes import router
+from backend.api.routes.upload import router as upload_router
 
 app = FastAPI(title="GradeOps API")
 
-app.include_router(router)
+app.include_router(upload_router)
 
 @app.get("/")
-async def root():
-    return {"message": "GradeOps backend running"}
+def home():
+    return {"message": "GradeOps Backend Running"}
