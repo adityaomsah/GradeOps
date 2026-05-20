@@ -2,11 +2,11 @@ from fastapi import APIRouter, UploadFile, File
 import shutil
 import os
 
-from ocr.pdf_to_images import pdf_to_image
+from backend.ocr.pdf_to_images import pdf_to_image
 
 router = APIRouter()
 
-UPLOAD_FOLDER = "backend/uploads"
+UPLOAD_FOLDER = "backend/ocr/uploads"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
