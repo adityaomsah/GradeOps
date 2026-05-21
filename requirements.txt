@@ -9,11 +9,13 @@ accelerate
 peft
 bitsandbytes
 qwen-vl-utils
+sentence-transformers
 
 # LangChain / Agents
 langchain
 langgraph
 langchain-community
+langchain-google-genai
 
 # Database
 sqlalchemy
