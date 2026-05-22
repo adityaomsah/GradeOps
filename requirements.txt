@@ -10,6 +10,7 @@ peft
 bitsandbytes
 qwen-vl-utils
 sentence-transformers
+scikit-learn
 
 # LangChain / Agents
 langchain
