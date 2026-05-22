@@ -11,6 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 
+
 # Defining Shared State
 class GradeState(TypedDict):
     student_name: str
@@ -25,11 +26,12 @@ class GradeState(TypedDict):
 
 class GradingResponse(BaseModel): # Defining Pydantic schema for structured LLM response
     score: int = Field(description="The numeric marks awarded strictly based on the rubric.")
-    justification: str = Field(description="Detailed reason for the assigned score.")
+
 
 # Defining the LLM
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
 structured_llm = llm.with_structured_output(GradingResponse)
+
 
 # Defining the Grading Node
 def grade_answer(state: GradeState) -> GradeState:
@@ -46,8 +48,8 @@ def grade_answer(state: GradeState) -> GradeState:
     response = structured_llm.invoke(prompt)
     
     state["score"] = response.score
-    state["justification"] = response.justification
     return state
+
 
 # Defining Plagiarism Node
 
@@ -68,7 +70,7 @@ def plagiarism_check(state: GradeState) -> GradeState:
     max_jaccard = 0.0
     max_cosine = 0.0
 
-    A = set(current_answer.strip().split())
+    A = set(current_answer.lower().strip().split())
     embedding_A = embedding_model.encode(current_answer)
 
     for other_answer in all_answers:
@@ -76,10 +78,10 @@ def plagiarism_check(state: GradeState) -> GradeState:
             continue
 
         # Jaccard
-        B = set(other_answer.strip().split())
+        B = set(other_answer.lower().strip().split())
         intersection = A.intersection(B)
         union = A.union(B)
-        jaccard = float(len(intersection)/len(union))
+        jaccard = float(len(intersection)/len(union)) if union else 0
         
         # Cosine
         embedding_B = embedding_model.encode(other_answer)
@@ -94,9 +96,44 @@ def plagiarism_check(state: GradeState) -> GradeState:
     state["plagiarism_flag"] = True if max_jaccard > 0.6 and max_cosine > 0.85 else False
     return state
 
+
+# Defining Human Review Node
+def human_review_needed(state: GradeState) -> GradeState:
+    state["score"] = -1 #not graded yet
+    state["justification"] = "⚠️ This answer has been flagged for potential plagiarism and requires manual review by the TA. Automated grading has been skipped."
+    return state
+
+
+# Defining Justification Node
+def generate_justification(state: GradeState) -> GradeState:
+    prompt = f"""
+    You are an exam evaluator.
+
+    Student Answer:{state["answer_script"]}
+    Rubric:{state["rubric"]}
+    Awarded Score:{state["score"]}
+    Plagiarism Flag: {state["plagiarism_flag"]}
+
+    Explain clearly and concisely why this score was awarded.
+
+    Mention:
+    - strengths
+    - missing points
+    - mistakes
+    - rubric alignment
+
+    Keep the explanation professional and concise.
+    """
+
+    response = llm.invoke(prompt)
+
+    state["justification"] = response.content.strip()
+    return state
+
 # Defining route, if flagged, bypass standard automated grading or route to human review
 def route_after_plagiarism(state: GradeState):
     if state["plagiarism_flag"]:
-        print(f"⚠️ Flagged for potential plagiarism (Score: {state['plagiarism_score']:.2f})")
+        print(f"Flagged for potential plagiarism (Score: {state['plagiarism_score']:.2f})")
         return "human_review_needed"
     return "grade_answer"
+
