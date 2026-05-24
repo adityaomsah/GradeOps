@@ -7,10 +7,10 @@ torch
 transformers
 accelerate
 peft
-bitsandbytes
 qwen-vl-utils
 sentence-transformers
 scikit-learn
+torchvision
 
 # LangChain / Agents
 langchain

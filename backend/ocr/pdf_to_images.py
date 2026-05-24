@@ -22,5 +22,5 @@ def pdf_to_image(pdf_path: str, output_save_folder: str, pdf_name: str) -> list:
     return image_paths
 
 if __name__ == "__main__":
-    pdf_to_image("D:/AIML/GradeOPsProject/GradeOps/backend/ocr/Testpdf.pdf", "backend/ocr/images", pdf_name = "Pdf1")
+    pdf_to_image("D:/AIML/GradeOPsProject/GradeOps/backend/ocr/Gemini-chat.pdf", "backend/ocr/images", pdf_name = "Pdf1")
 
