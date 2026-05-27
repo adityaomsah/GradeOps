@@ -1,4 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, Form
+# grade.py endpoint
+# Goal: Accept exam PDF + rubric_id, extract text via OCR, run through grading pipeline
+# Returns: score, justification, plagiarism_score, plagiarism_flag
+# TODO: Remove student_name and student_roll_no Form fields once vision_extractor returns them automatically
+
+
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
 from typing import List
 import shutil
@@ -8,6 +14,7 @@ import os
 from backend.ocr.pdf_to_images import pdf_to_image
 from backend.ocr.vision_extractor import text_from_image
 from backend.agent.grader import grading_pipeline, GradeState
+from backend.api.routes.rubrics import rubric_store
 
 router = APIRouter()
 
@@ -26,10 +33,8 @@ class GradeResponse(BaseModel):
 
 @router.post("/grade", response_model=GradeResponse)
 async def grade_student(                           #FastAPI can't receive a file and a JSON body at the same time. 
-    file: UploadFile = File(...),
-    student_name: str = Form(...),                 #So we pass each field separately as Form fields
-    student_roll_no: int = Form(...),
-    rubric: str = Form(...),
+    file: UploadFile = File(...),            
+    rubric_id: str = Form(...),                    #So we pass each field separately as Form fields
     all_answers: str = Form(...)
 ):
     # 1. Save PDF
@@ -38,6 +43,12 @@ async def grade_student(                           #FastAPI can't receive a file
     pdf_path = os.path.join(UPLOAD_FOLDER, file.filename)
     with open(pdf_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    # Fetch rubric from store
+    if rubric_id not in rubric_store:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    rubric_data = rubric_store[rubric_id]
+    rubric_text = json.dumps(rubric_data)  # convert dict to string for the prompt
 
     # 2. Convert PDF to images
     image_paths = pdf_to_image(
@@ -56,7 +67,7 @@ async def grade_student(                           #FastAPI can't receive a file
         "student_name": student_name,
         "student_roll_no": student_roll_no,
         "answer_script": extracted_text,
-        "rubric": rubric,
+        "rubric": rubric_text,
         "all_answers": json.loads(all_answers),
         "score": 0,
         "justification": "",
