@@ -15,6 +15,7 @@ from backend.ocr.pdf_to_images import pdf_to_image
 from backend.ocr.vision_extractor import text_from_image
 from backend.agent.grader import grading_pipeline, GradeState
 from backend.api.routes.rubrics import rubric_store
+from backend.api.routes.results import results_store
 
 router = APIRouter()
 
@@ -76,6 +77,17 @@ async def grade_student(                           #FastAPI can't receive a file
     }
 
     result = grading_pipeline.invoke(state)
+    # Save result to results_store
+    results_store[student_roll_no] = {
+        "student_name": student_name,
+        "student_roll_no": student_roll_no,
+        "score": result["score"],
+        "justification": result["justification"],
+        "plagiarism_score": result["plagiarism_score"],
+        "plagiarism_flag": result["plagiarism_flag"],
+        "ta_reviewed": False,
+        "ta_override_score": None
+}
 
     # 5. Return response
     return GradeResponse(
