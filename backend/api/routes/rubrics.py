@@ -1,7 +1,7 @@
 # rubrics.py endpoint
 # Goal: To input the rubrics pdf uploaded by prof and output rubric_id and JSON rubric
 
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from typing import List
 import shutil
@@ -90,3 +90,9 @@ async def upload_rubric(file: UploadFile = File(...)):
     max_marks=rubric_data["max_marks"],
     criteria=rubric_data["criteria"]
     )                   
+
+    @router.get("/rubric/{rubric_id}")
+    def get_rubric(rubric_id: str):
+        if rubric_id not in rubric_store:
+            raise HTTPException(status_code=404, detail="Rubric not found")
+        return rubric_store[rubric_id]
