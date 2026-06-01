@@ -1,7 +1,7 @@
 # vision_extractor.py
 # Goal: take an image path, return transcribed handwritten text as a string
 
-import torch
+import torch, json, re 
 from PIL import Image
 from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
 
@@ -15,7 +15,7 @@ VLMprocessor = AutoProcessor.from_pretrained(
     "Qwen/Qwen2-VL-2B-Instruct"
 )
 
-def text_from_image(img_path : str) -> str:
+def text_from_image(img_path : str) -> dict:
     try:
         image = Image.open(img_path).convert("RGB")
     except Exception as e:
@@ -30,7 +30,18 @@ def text_from_image(img_path : str) -> str:
                 },
                 {
                     "type": "text",
-                    "text": "OCR the text in the image."
+                    "text": (
+                        "OCR all the text in the image."
+                        "Then extract the student's name and roll number if present. "
+                        "Reply in this exact JSON format and nothing else:\n"
+                       "{\n"
+                        '  "name": "<student name or null>",\n'
+                        '  "roll_no": "<roll number or null>",\n'
+                        '  "raw_text": "<full OCR transcription>"\n'
+                        "}"
+                             
+
+                    )
                 }
             ],
         }
@@ -45,9 +56,7 @@ def text_from_image(img_path : str) -> str:
         images = [image],
         padding = True,
         return_tensors = "pt",
-    )
-
-    inputs = inputs.to("cuda")
+    ).to("cuda")
 
     generated_ids = model.generate(**inputs, max_new_tokens=512)
     generated_ids_trimmed = [
@@ -58,12 +67,23 @@ def text_from_image(img_path : str) -> str:
     output_text = VLMprocessor.batch_decode(
         generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
     )
-    output_string = "".join(output_text)
+    output_string_raw = "".join(output_text).strip()
 
-    return output_string
+    try:
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", output_string_raw, flags=re.DOTALL).strip()
+        result = json.loads(cleaned)
+    except json.JSONDecodeError:
+        result = {
+            "name" : None,
+            "roll_no" : None,
+            "raw_text" : output_string_raw
+        }
+    return result
 
 
 # 5. test block (if __name__ == "__main__")
 if __name__ == "__main__":
     text_op = text_from_image("D:/AIML/GradeOPsProject/GradeOps/backend/ocr/images/Pdf1_page_2.png")
-    print(text_op)
+    print("Name    :", text_op.get("name"))
+    print("Roll No :", text_op.get("roll_no"))
+    print("Text    :", text_op.get("raw_text"))
