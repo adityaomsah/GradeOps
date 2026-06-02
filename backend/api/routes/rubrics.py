@@ -1,7 +1,7 @@
 # rubrics.py endpoint
 # Goal: To input the rubrics pdf uploaded by prof and output rubric_id and JSON rubric
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List
 import shutil
@@ -11,6 +11,8 @@ import uuid
 
 from backend.ocr.pdf_to_images import pdf_to_image
 from backend.ocr.vision_extractor import text_from_image
+from backend.api.routes.auth import get_current_user
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
@@ -20,8 +22,7 @@ router = APIRouter()
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
 
-# In-memory storage for now (replace with database later)
-rubric_store = {}
+rubric_store = {} # currently using in memory dictionary, later need to store in database using SQL
 
 class RubricCriteria(BaseModel):
     condition: str
@@ -36,7 +37,11 @@ class RubricResponse(BaseModel):
 
 
 @router.post("/rubric", response_model=RubricResponse)
-async def upload_rubric(file: UploadFile = File(...)):
+async def upload_rubric(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+    # RBAC
+    if current_user["role"] not in {"instructor"}:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     # 1. Save PDF
     UPLOAD_FOLDER = "backend/ocr/uploads/rubric"
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -91,8 +96,12 @@ async def upload_rubric(file: UploadFile = File(...)):
     criteria=rubric_data["criteria"]
     )                   
 
-    @router.get("/rubric/{rubric_id}")
-    def get_rubric(rubric_id: str):
-        if rubric_id not in rubric_store:
-            raise HTTPException(status_code=404, detail="Rubric not found")
-        return rubric_store[rubric_id]
+@router.get("/rubric/{rubric_id}")
+def get_rubric(rubric_id: str, current_user = Depends(get_current_user)):
+    # RBAC
+    if current_user["role"] not in {"instructor", "ta"}:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if rubric_id not in rubric_store:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    return rubric_store[rubric_id]

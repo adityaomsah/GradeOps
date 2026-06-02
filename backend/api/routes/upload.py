@@ -1,8 +1,10 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 import shutil
 import os
 
 from backend.ocr.pdf_to_images import pdf_to_image
+from backend.api.routes.auth import get_current_user
+
 
 router = APIRouter()
 
@@ -12,8 +14,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @router.post("/upload-pdf/")
-async def upload_pdf(file: UploadFile = File(...)):
-
+async def upload_pdf(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+    # RBAC
+    if current_user["role"] != "ta":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     # Save uploaded PDF
     pdf_path = os.path.join(UPLOAD_FOLDER, file.filename)
 

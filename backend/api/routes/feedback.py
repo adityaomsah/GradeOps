@@ -1,10 +1,13 @@
 # feedback.py
 # Goal: Allow TAs to approve or override AI-generated grades
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
+
 from backend.api.routes.results import results_store
+from backend.api.routes.auth import get_current_user
+
 
 router = APIRouter()
 
@@ -15,7 +18,11 @@ class FeedbackRequest(BaseModel):
 
 
 @router.post("/feedback")
-async def submit_feedback(feedback: FeedbackRequest):
+async def submit_feedback(feedback: FeedbackRequest, current_user = Depends(get_current_user)):
+    # RBAC
+    if current_user["role"] not in {"instructor", "ta"}:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     # 1. Check if student exists
     if feedback.student_roll_no not in results_store:
         raise HTTPException(status_code=404, detail="Student result not found")
