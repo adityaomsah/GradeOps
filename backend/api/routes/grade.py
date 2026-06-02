@@ -1,12 +1,10 @@
 # grade.py endpoint
 # Goal: Accept exam PDF + rubric_id, extract text via OCR, run through grading pipeline
 # Returns: score, justification, plagiarism_score, plagiarism_flag
-# TODO: Remove student_name and student_roll_no Form fields once vision_extractor returns them automatically
 
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List
 import shutil
 import json
 import os
@@ -16,14 +14,10 @@ from backend.ocr.vision_extractor import text_from_image
 from backend.agent.grader import grading_pipeline, GradeState
 from backend.api.routes.rubrics import rubric_store
 from backend.api.routes.results import results_store
+from backend.api.routes.auth import get_current_user
+
 
 router = APIRouter()
-
-class GradeRequest(BaseModel):
-    student_name: str
-    student_roll_no: int
-    rubric: str
-    all_answers: List[str] 
 
 class GradeResponse(BaseModel):
     score: int
@@ -36,8 +30,13 @@ class GradeResponse(BaseModel):
 async def grade_student(                           #FastAPI can't receive a file and a JSON body at the same time. 
     file: UploadFile = File(...),            
     rubric_id: str = Form(...),                    #So we pass each field separately as Form fields
-    all_answers: str = Form(...)
+    all_answers: str = Form(...),
+    current_user = Depends(get_current_user)
 ):
+    # RBAC
+    if current_user["role"] != "ta":
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     # 1. Save PDF
     UPLOAD_FOLDER = "backend/ocr/uploads"
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -58,10 +57,17 @@ async def grade_student(                           #FastAPI can't receive a file
         pdf_name=file.filename.split(".")[0]
     )
 
-    # 3. Extract text from each image
+    # 3. Extract text and student info from first page
     extracted_text = ""
-    for image_path in image_paths:
-        extracted_text += text_from_image(image_path) + "\n"
+    student_name = ""
+    student_roll_no = 0
+
+    for i, image_path in enumerate(image_paths):
+        result = text_from_image(image_path)
+        extracted_text += result["raw_text"] + "\n"
+        if i == 0:  # get student info from first page only
+            student_name = result["name"] or ""
+            student_roll_no = int(result["roll_no"]) if result["roll_no"] else 0
 
     # 4. Build state and run pipeline
     state: GradeState = {
