@@ -19,6 +19,7 @@ langchain-community
 langchain-google-genai
 
 # Database
+postgresql
 sqlalchemy
 psycopg2-binary
 
@@ -27,3 +28,8 @@ python-multipart
 python-dotenv
 Pillow
 pdf2image
+
+# Authentication/JWT
+python-jose
+passlib
+bcrypt

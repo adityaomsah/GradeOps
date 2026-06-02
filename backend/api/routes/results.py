@@ -8,7 +8,7 @@ from typing import Optional
 router = APIRouter()
 
 # Shared results store — written by /grade, read by /results
-results_store = {}
+results_store = {} # currently using in memory dictionary, later need to store in database using SQL
 
 class StudentResult(BaseModel):
     student_name: str
