@@ -6,6 +6,10 @@ from backend.api.routes.results import router as results_router
 from backend.api.routes.feedback import router as feedback_router
 from backend.api.routes.auth import router as auth_router
 
+from backend.db.database import engine
+from backend.db import models
+
+models.BaseClass.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GradeOps API")
 

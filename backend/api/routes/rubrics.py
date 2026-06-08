@@ -7,14 +7,16 @@ from typing import List
 import shutil
 import json
 import os
-import uuid
 
 from backend.ocr.pdf_to_images import pdf_to_image
 from backend.ocr.vision_extractor import text_from_image
 from backend.api.routes.auth import get_current_user
-
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
+
+from sqlalchemy.orm import Session
+from backend.db.database import get_db
+from backend.db.models import Rubric
 
 load_dotenv()
 
@@ -22,14 +24,13 @@ router = APIRouter()
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
 
-rubric_store = {} # currently using in memory dictionary, later need to store in database using SQL
 
 class RubricCriteria(BaseModel):
     condition: str
     marks: int
 
 class RubricResponse(BaseModel):
-    rubric_id: str
+    rubric_id: int
     question: str
     max_marks: int
     criteria: List[RubricCriteria]
@@ -37,7 +38,12 @@ class RubricResponse(BaseModel):
 
 
 @router.post("/rubric", response_model=RubricResponse)
-async def upload_rubric(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+async def upload_rubric(
+    file: UploadFile = File(...), 
+    current_user = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    
     # RBAC
     if current_user["role"] not in {"instructor"}:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -59,7 +65,7 @@ async def upload_rubric(file: UploadFile = File(...), current_user = Depends(get
     # 3. Extract text from each image
     extracted_text = ""
     for image_path in image_paths:
-        extracted_text += text_from_image(image_path) + "\n"
+        extracted_text += text_from_image(image_path)["raw_text"] + "\n"
 
     # 4. Ask LLM to parse rubric into structured JSON
     prompt = f"""
@@ -84,24 +90,40 @@ async def upload_rubric(file: UploadFile = File(...), current_user = Depends(get
     raw = raw.replace("```json", "").replace("```", "").strip() # remove ```json and ``` if present
     rubric_data = json.loads(raw)
 
-    # 6. Generate unique rubric_id and store
-    rubric_id = str(uuid.uuid4())
-    rubric_store[rubric_id] = rubric_data
+    # 6. Generate unique rubric_id and store to database
+    new_rubric = Rubric(
+        question=rubric_data["question"],
+        max_marks=rubric_data["max_marks"],
+        criteria=rubric_data["criteria"]
+    )
+    db.add(new_rubric)
+    db.commit()
+    db.refresh(new_rubric)
 
-    # 7. Return response
     return RubricResponse(
-    rubric_id=rubric_id,
-    question=rubric_data["question"],
-    max_marks=rubric_data["max_marks"],
-    criteria=rubric_data["criteria"]
-    )                   
+        rubric_id=new_rubric.id,
+        question=new_rubric.question,
+        max_marks=new_rubric.max_marks,
+        criteria=new_rubric.criteria
+    )                 
 
 @router.get("/rubric/{rubric_id}")
-def get_rubric(rubric_id: str, current_user = Depends(get_current_user)):
+def get_rubric(
+    rubric_id: int, 
+    current_user = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     # RBAC
     if current_user["role"] not in {"instructor", "ta"}:
         raise HTTPException(status_code=403, detail="Access denied")
-    
-    if rubric_id not in rubric_store:
+
+    rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
+    if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
-    return rubric_store[rubric_id]
+
+    return {
+        "rubric_id": rubric.id,
+        "question": rubric.question,
+        "max_marks": rubric.max_marks,
+        "criteria": rubric.criteria
+    }

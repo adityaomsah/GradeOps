@@ -25,14 +25,14 @@ class GradeState(TypedDict):
     student_roll_no: int
     answer_script: str # extracted text
     rubric: str
-    score: int
+    score: float
     justification: str
     all_answers: List[str] # all answer scripts to comapre for plagiarism
     plagiarism_score: float  # similarity score, TA decides if it's cheating
     plagiarism_flag: bool    # True if score crosses threshold AND answer is long
 
 class GradingResponse(BaseModel): # Defining Pydantic schema for structured LLM response
-    score: int = Field(description="The numeric marks awarded strictly based on the rubric.")
+    score: float = Field(description="The numeric marks awarded strictly based on the rubric.")
 
 
 # Defining the LLM

@@ -10,30 +10,24 @@ from jose import jwt
 from dotenv import load_dotenv
 import os
 
+from sqlalchemy.orm import Session
+from backend.db.database import get_db
+from backend.db.models import User
+
 router = APIRouter()
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM="HS256"
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_password(
-    plain_password: str,
-    hashed_password: str
-) -> bool:
-    return pwd_context.verify(
-        plain_password,
-        hashed_password
-    )
+def verify_password(plain_password: str,hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
-users_db = {} # currently using in memory dictionary, later need to store in database using SQL
 
 class UserRegisterRequest(BaseModel):
     user_email_id: EmailStr
@@ -68,54 +62,64 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-def create_first_admin():
-    admin_email = os.getenv("ADMIN_EMAIL")
-    admin_password = os.getenv("ADMIN_PASSWORD")
+# def create_first_admin():
+#     admin_email = os.getenv("ADMIN_EMAIL")
+#     admin_password = os.getenv("ADMIN_PASSWORD")
     
-    if admin_email and admin_email not in users_db:
-        users_db[admin_email] = {
-            "password_hash": hash_password(admin_password),
-            "role": "admin"
-        }
-        print(f"✅ First admin created: {admin_email}")
+#     if admin_email and admin_email not in users_db:
+#         users_db[admin_email] = {
+#             "password_hash": hash_password(admin_password),
+#             "role": "admin"
+#         }
+#         print(f"✅ First admin created: {admin_email}")
 
-create_first_admin()
+# create_first_admin()
 
 
 @router.post("/register")
-def register(user: UserRegisterRequest, current_user = Depends(get_current_user)):
+def register(
+    user: UserRegisterRequest, 
+    current_user = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+
     # RBAC
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only admin can register users")
 
-    if user.user_email_id in users_db:
+    existing = db.query(User).filter(User.email == user.user_email_id).first()
+    if existing:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    users_db[user.user_email_id] = {
-        "password_hash": hash_password(user.user_password),
-        "role": user.user_role
-    }
+    new_user = User(
+        email=user.user_email_id,
+        password_hash=hash_password(user.user_password),
+        role=user.user_role
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return {"message": "User registered successfully"}
 
 @router.post("/login")
-def login(user: UserLoginRequest):
+def login(
+    user: UserLoginRequest, 
+    db: Session = Depends(get_db)
+):
 
-    db_user = users_db.get(user.email)
+    db_user = db.query(User).filter(User.email == user.email).first()
 
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not verify_password(
-        user.password,
-        db_user["password_hash"]
-    ):
+    if not verify_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = jwt.encode(
     {
         "sub": str(user.email),
-        "role": db_user["role"],
+        "role": db_user.role,
         "exp": datetime.now(timezone.utc) + timedelta(hours=24)  # expires in 24 hours
     },
     SECRET_KEY,

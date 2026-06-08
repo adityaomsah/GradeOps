@@ -9,7 +9,7 @@ class User(BaseClass):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)
-
+    roll_no       = Column(Integer, nullable=True)
 
 class Exam(BaseClass):
     __tablename__ = "exams"
@@ -32,7 +32,7 @@ class Rubric(BaseClass):
     max_marks = Column(Integer, nullable=False)
     criteria = Column(JSON, nullable=False)
 
-    grades = relationship("Grade", back_populates="grades")
+    grades = relationship("Grade", back_populates="rubric")
 
 class Grade(BaseClass):
     __tablename__ = "grades"
@@ -41,7 +41,7 @@ class Grade(BaseClass):
     exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False)
     rubric_id = Column(Integer, ForeignKey("rubrics.id"), nullable=False)
     student_name = Column(String)
-    roll_no = Column(String, nullable = False)
+    student_roll_no = Column(Integer, nullable = False)
     score = Column(Float)
     justification = Column(String)
     plagiarism_score = Column(Float, default = 0.0)

@@ -12,15 +12,16 @@ import os
 from backend.ocr.pdf_to_images import pdf_to_image
 from backend.ocr.vision_extractor import text_from_image
 from backend.agent.grader import grading_pipeline, GradeState
-from backend.api.routes.rubrics import rubric_store
-from backend.api.routes.results import results_store
 from backend.api.routes.auth import get_current_user
 
+from sqlalchemy.orm import Session
+from backend.db.database import get_db
+from backend.db.models import Rubric, Grade
 
 router = APIRouter()
 
 class GradeResponse(BaseModel):
-    score: int
+    score: float
     justification: str
     plagiarism_score: float  
     plagiarism_flag: bool
@@ -29,9 +30,10 @@ class GradeResponse(BaseModel):
 @router.post("/grade", response_model=GradeResponse)
 async def grade_student(                           #FastAPI can't receive a file and a JSON body at the same time. 
     file: UploadFile = File(...),            
-    rubric_id: str = Form(...),                    #So we pass each field separately as Form fields
+    rubric_id: int = Form(...),                    #So we pass each field separately as Form fields
     all_answers: str = Form(...),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     # RBAC
     if current_user["role"] != "ta":
@@ -44,20 +46,24 @@ async def grade_student(                           #FastAPI can't receive a file
     with open(pdf_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Fetch rubric from store
-    if rubric_id not in rubric_store:
+    # 2. Fetch rubric from database
+    rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
+    if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
-    rubric_data = rubric_store[rubric_id]
-    rubric_text = json.dumps(rubric_data)  # convert dict to string for the prompt
+    rubric_text = json.dumps({
+        "question": rubric.question,
+        "max_marks": rubric.max_marks,
+        "criteria": rubric.criteria
+    })
 
-    # 2. Convert PDF to images
+    # 3. Convert PDF to images
     image_paths = pdf_to_image(
         pdf_path=pdf_path,
         output_save_folder="backend/ocr/images",
         pdf_name=file.filename.split(".")[0]
     )
 
-    # 3. Extract text and student info from first page
+    # 4. Extract text and student info from first page
     extracted_text = ""
     student_name = ""
     student_roll_no = 0
@@ -69,7 +75,7 @@ async def grade_student(                           #FastAPI can't receive a file
             student_name = result["name"] or ""
             student_roll_no = int(result["roll_no"]) if result["roll_no"] else 0
 
-    # 4. Build state and run pipeline
+    # 5. Build state and run pipeline
     state: GradeState = {
         "student_name": student_name,
         "student_roll_no": student_roll_no,
@@ -83,19 +89,22 @@ async def grade_student(                           #FastAPI can't receive a file
     }
 
     result = grading_pipeline.invoke(state)
-    # Save result to results_store
-    results_store[student_roll_no] = {
-        "student_name": student_name,
-        "student_roll_no": student_roll_no,
-        "score": result["score"],
-        "justification": result["justification"],
-        "plagiarism_score": result["plagiarism_score"],
-        "plagiarism_flag": result["plagiarism_flag"],
-        "ta_reviewed": False,
-        "ta_override_score": None
-}
+    # 6. Save result to database
+    new_grade = Grade(
+        rubric_id=rubric_id,
+        student_name=student_name,
+        student_roll_no=student_roll_no,
+        score=result["score"],
+        justification=result["justification"],
+        plagiarism_score=result["plagiarism_score"],
+        plagiarism_flag=result["plagiarism_flag"],
+        ta_reviewed=False,
+        ta_override_score=None
+    )
+    db.add(new_grade)
+    db.commit()
+    db.refresh(new_grade)
 
-    # 5. Return response
     return GradeResponse(
         score=result["score"],
         justification=result["justification"],
