@@ -9,16 +9,14 @@ class User(BaseClass):
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)
-    roll_no       = Column(Integer, nullable=True)
 
 class Exam(BaseClass):
     __tablename__ = "exams"
 
     id = Column(Integer, primary_key = True, index=True)
-    exam_name = Column(String, nullable=False)
-    subject = Column(String)
-    uploaded_pdf_filename = Column(String, nullable = False)
-    date = Column(String)
+    course_name = Column(String, nullable=False)
+    course_code = Column(String, nullable=False)
+    exam_type = Column(String, nullable=False)
     total_marks = Column(Float, nullable = False)
 
     grades = relationship("Grade", back_populates = "exam")
@@ -48,6 +46,7 @@ class Grade(BaseClass):
     plagiarism_flag = Column(Boolean, default =False)
     ta_reviewed = Column(Boolean, default = False)
     ta_override_score = Column(Float, nullable = True)
+    uploaded_pdf_filename = Column(String, nullable=True)
 
     exam = relationship("Exam", back_populates = "grades" )
     rubric = relationship("Rubric", back_populates="grades")

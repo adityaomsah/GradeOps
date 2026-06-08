@@ -5,6 +5,7 @@ from backend.api.routes.rubrics import router as rubrics_router
 from backend.api.routes.results import router as results_router
 from backend.api.routes.feedback import router as feedback_router
 from backend.api.routes.auth import router as auth_router
+from backend.api.routes.exam import router as exam_router
 
 from backend.db.database import engine, get_db
 from backend.db import models
@@ -45,6 +46,7 @@ app.include_router(rubrics_router)
 app.include_router(results_router)
 app.include_router(feedback_router)
 app.include_router(auth_router)
+app.include_router(exam_router)
 
 
 @app.get("/")

@@ -98,9 +98,10 @@ async def grade_student(                           #FastAPI can't receive a file
         justification=result["justification"],
         plagiarism_score=result["plagiarism_score"],
         plagiarism_flag=result["plagiarism_flag"],
+        uploaded_pdf_filename=file.filename,  # ← add this
         ta_reviewed=False,
         ta_override_score=None
-    )
+)
     db.add(new_grade)
     db.commit()
     db.refresh(new_grade)
