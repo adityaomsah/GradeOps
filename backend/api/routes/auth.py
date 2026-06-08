@@ -2,7 +2,7 @@
 # Goal: Handle user registration and login, issue JWT tokens
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
@@ -45,7 +45,7 @@ class UserRegisterRequest(BaseModel):
         return value
 
 class UserLoginRequest(BaseModel):
-    email: EmailStr
+    username: EmailStr
     password: str
 
 
@@ -102,31 +102,28 @@ def register(
 
     return {"message": "User registered successfully"}
 
+
 @router.post("/login")
 def login(
-    user: UserLoginRequest, 
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(User).filter(User.email == form_data.username).first()
 
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not verify_password(user.password, db_user.password_hash):
+    if not verify_password(form_data.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = jwt.encode(
-    {
-        "sub": str(user.email),
-        "role": db_user.role,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=24)  # expires in 24 hours
-    },
-    SECRET_KEY,
-    algorithm=ALGORITHM
+        {
+            "sub": str(form_data.username),
+            "role": db_user.role,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM
     )
 
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
+    return {"access_token": token, "token_type": "bearer"}
