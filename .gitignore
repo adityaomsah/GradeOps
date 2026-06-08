@@ -222,3 +222,5 @@ backend/ocr/uploads/*
 backend/ocr/images/*
 !backend/ocr/uploads/.gitkeep
 !backend/ocr/images/.gitkeep
+
+*.db

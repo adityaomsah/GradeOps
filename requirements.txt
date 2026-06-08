@@ -28,6 +28,7 @@ python-multipart
 python-dotenv
 Pillow
 pdf2image
+pydantic[email]
 
 # Authentication/JWT
 python-jose

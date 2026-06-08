@@ -6,12 +6,38 @@ from backend.api.routes.results import router as results_router
 from backend.api.routes.feedback import router as feedback_router
 from backend.api.routes.auth import router as auth_router
 
-from backend.db.database import engine
+from backend.db.database import engine, get_db
 from backend.db import models
+import os
+from backend.db.models import User
+from backend.api.routes.auth import hash_password
+from contextlib import asynccontextmanager
 
-models.BaseClass.metadata.create_all(bind=engine)
 
-app = FastAPI(title="GradeOps API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # runs on startup
+    models.BaseClass.metadata.create_all(bind=engine)
+    db = next(get_db())
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    
+    if admin_email:
+        existing = db.query(User).filter(User.email == admin_email).first()
+        if not existing:
+            admin = User(
+                email=admin_email,
+                password_hash=hash_password(admin_password),
+                role="admin"
+            )
+            db.add(admin)
+            db.commit()
+            print(f"✅ First admin created: {admin_email}")
+    db.close()
+    
+    yield 
+    
+app = FastAPI(title="GradeOps API", lifespan=lifespan)
 
 app.include_router(upload_router)
 app.include_router(grade_router)
