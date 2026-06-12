@@ -29,6 +29,7 @@ python-dotenv
 Pillow
 pdf2image
 pydantic[email]
+pandas
 
 # Authentication/JWT
 python-jose
