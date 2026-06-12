@@ -19,7 +19,7 @@ def text_from_image(img_path : str) -> dict:
     try:
         image = Image.open(img_path).convert("RGB")
     except Exception as e:
-        return f"ERROR: Could not open image — {str(e)}"
+        return {"name": None, "roll_no": None, "raw_text": f"ERROR: {str(e)}"}
 
     message_list = [
         {

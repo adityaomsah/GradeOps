@@ -98,7 +98,7 @@ async def grade_student(                           #FastAPI can't receive a file
         justification=result["justification"],
         plagiarism_score=result["plagiarism_score"],
         plagiarism_flag=result["plagiarism_flag"],
-        uploaded_pdf_filename=file.filename,  # ← add this
+        uploaded_pdf_filename=file.filename,
         ta_reviewed=False,
         ta_override_score=None
 )
