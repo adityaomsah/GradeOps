@@ -8,7 +8,7 @@ from typing import Optional
 from backend.api.routes.auth import get_current_user
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Grade, User
+from backend.db.models import Grade, User, GradeHistory
 
 router = APIRouter()
 
@@ -56,3 +56,16 @@ async def get_student_result(
             raise HTTPException(status_code=403, detail="Access denied")
 
     return grade
+
+
+@router.get("/results/{grade_id}/history")
+async def get_grade_history(
+    grade_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user["role"] == "student":
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    history = db.query(GradeHistory).filter(GradeHistory.grade_id == grade_id).order_by(GradeHistory.timestamp).all()
+    return history

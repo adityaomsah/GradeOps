@@ -16,7 +16,7 @@ from backend.api.routes.auth import get_current_user
 
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Rubric, Grade
+from backend.db.models import Rubric, Exam, Grade, GradeHistory
 
 router = APIRouter()
 
@@ -29,7 +29,8 @@ class GradeResponse(BaseModel):
 
 @router.post("/grade", response_model=GradeResponse)
 async def grade_student(                           #FastAPI can't receive a file and a JSON body at the same time. 
-    file: UploadFile = File(...),            
+    file: UploadFile = File(...),     
+    exam_id: int = Form(...),       
     rubric_id: int = Form(...),                    #So we pass each field separately as Form fields
     all_answers: str = Form(...),
     current_user = Depends(get_current_user),
@@ -101,9 +102,16 @@ async def grade_student(                           #FastAPI can't receive a file
     }
 
     result = grading_pipeline.invoke(state)
+
+    # Fetch exam from database
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
     # 6. Save result to database
     new_grade = Grade(
         rubric_id=rubric_id,
+        exam_id=exam_id,
         student_name=student_name,
         student_roll_no=student_roll_no,
         score=result["score"],
@@ -117,6 +125,18 @@ async def grade_student(                           #FastAPI can't receive a file
     db.add(new_grade)
     db.commit()
     db.refresh(new_grade)
+
+    initial_history = GradeHistory(
+    grade_id=new_grade.id,
+    old_score=None,
+    new_score=new_grade.score,
+    changed_by="system",
+    reason="Initial AI grading",
+    action="ai_graded"
+    )
+    db.add(initial_history)
+    db.commit()
+    db.refresh(initial_history)
 
     return GradeResponse(
         score=result["score"],

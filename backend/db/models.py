@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, JSON, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from backend.db.database import BaseClass, engine
 
 
@@ -51,6 +52,25 @@ class Grade(BaseClass):
 
     exam = relationship("Exam", back_populates = "grades" )
     rubric = relationship("Rubric", back_populates="grades")
+    history = relationship("GradeHistory", back_populates="grade")
+
+class GradeHistory(BaseClass):
+    """
+    Audit trail — records every change made to a Grade.
+    Tracks AI's original score vs TA overrides, with reasoning and reviewer info.
+    """
+    __tablename__ = "grade_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    grade_id = Column(Integer, ForeignKey("grades.id"), nullable=False)
+    old_score = Column(Float, nullable=True)   
+    new_score = Column(Float, nullable=True)   
+    changed_by = Column(String, nullable=False) 
+    reason = Column(String, nullable=True)  # justification for change
+    action = Column(String, nullable=False) # ai_graded / approved / overridden
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    grade = relationship("Grade", back_populates="history")
 
 
 BaseClass.metadata.create_all(bind = engine)
