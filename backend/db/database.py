@@ -20,3 +20,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
+print(repr(SQLALCHEMY_DATABASE_URL))
