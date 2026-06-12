@@ -19,6 +19,18 @@ async def upload_pdf(file: UploadFile = File(...), current_user = Depends(get_cu
     if current_user["role"] != "ta":
         raise HTTPException(status_code=403, detail="Access denied")
     
+    # File validation
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    contents = await file.read()
+    MAX_SIZE = 20 * 1024 * 1024  # 20 MB
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 20MB)")
+
+    # reset file pointer since we read it
+    await file.seek(0)
+    
     # Save uploaded PDF
     pdf_path = os.path.join(UPLOAD_FOLDER, file.filename)
 
