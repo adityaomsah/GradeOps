@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, JSON, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.db.database import BaseClass, engine
+from backend.db.database import BaseClass
 
 
 class User(BaseClass):
@@ -71,6 +71,3 @@ class GradeHistory(BaseClass):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     grade = relationship("Grade", back_populates="history")
-
-
-BaseClass.metadata.create_all(bind = engine)

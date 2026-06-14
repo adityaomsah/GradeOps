@@ -112,8 +112,10 @@ async def export_results_csv(
     df.to_csv(stream, index=False)
     stream.seek(0)
 
+    filename = f"exam_{exam_id}_results.csv" if exam_id is not None else "gradeops_all_results.csv"
+
     return StreamingResponse(
         iter([stream.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=exam_{exam_id}_results.csv"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
