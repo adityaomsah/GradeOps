@@ -71,3 +71,18 @@ class GradeHistory(BaseClass):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     grade = relationship("Grade", back_populates="history")
+
+class Submission(BaseClass):
+    __tablename__ = "submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    exam_id = Column(Integer, ForeignKey("exams.id"), nullable=False, index=True)
+    student_roll_no = Column(Integer, nullable=True, index=True)
+    file_url = Column(String, nullable=False)
+    status = Column(String, default="uploaded")  # uploaded | graded | error
+    grade_id = Column(Integer, ForeignKey("grades.id"), nullable=True)
+    score_cache = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    exam = relationship("Exam")
+    grade = relationship("Grade")
