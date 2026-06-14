@@ -11,7 +11,6 @@ from backend.api.routes.auth import get_current_user
 
 router = APIRouter()
 
-
 @router.get("/analytics/exam/{exam_id}")
 async def get_exam_analytics(
     exam_id: int,
@@ -44,13 +43,6 @@ async def get_exam_analytics(
     series = pd.Series(final_scores)
     max_marks = exam.total_marks
 
-    # Score distribution in 5 buckets across 0 → max_marks
-    bucket_size = max_marks / 5
-    bins = [round(bucket_size * i, 2) for i in range(5)]
-    bins.append(max_marks + 0.01)
-    labels = [f"{bins[i]}-{bins[i+1]}" for i in range(5)]
-    distribution_counts = pd.cut(series, bins=bins, labels=labels, include_lowest=True).value_counts().sort_index()
-
     plagiarism_flagged = sum(1 for g in grades if g.plagiarism_flag)
     ta_reviewed = sum(1 for g in grades if g.ta_reviewed)
 
@@ -63,7 +55,6 @@ async def get_exam_analytics(
         "min_score": round(series.min(), 2),
         "max_score": round(series.max(), 2),
         "max_marks": max_marks,
-        "score_distribution": distribution_counts.to_dict(),
         "plagiarism_flagged_count": plagiarism_flagged,
         "ta_reviewed_count": ta_reviewed,
         "ta_pending_count": len(grades) - ta_reviewed
@@ -118,60 +109,3 @@ async def get_dashboard_summary(
         "plagiarism_flags": plagiarism_flags,
         "pending_reviews": pending_reviews
     }
-
-
-@router.get("/analytics/grade-distribution")
-async def get_grade_distribution(
-    current_user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Grade distribution (A/B/C/D/F) across all exams, based on percentage:
-      A >= 90, B >= 80, C >= 70, D >= 60, F < 60
-    Final score = TA override if present, else AI score.
-    Skips invalid scores (-1, None) and exams with invalid total_marks (<= 0).
-    """
-    if current_user["role"] not in {"instructor", "ta"}:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    distribution = {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}
-
-    grades = db.query(Grade).all()
-    if not grades:
-        return distribution
-
-    # Pre-fetch exams keyed by id to avoid N+1 queries
-    exam_ids = {g.exam_id for g in grades}
-    exams = db.query(Exam).filter(Exam.id.in_(exam_ids)).all()
-    exam_marks = {e.id: e.total_marks for e in exams}
-
-    for g in grades:
-        # Determine final score, skipping invalid placeholders
-        if g.ta_override_score is not None:
-            final_score = g.ta_override_score
-        elif g.score is not None and g.score != -1:
-            final_score = g.score
-        else:
-            continue  # no valid score to grade
-
-        max_marks = exam_marks.get(g.exam_id)
-        if not max_marks or max_marks <= 0:
-            continue  # skip exams with invalid/missing total_marks (avoid div-by-zero)
-
-        percentage = (final_score / max_marks) * 100
-
-        if percentage >= 90:
-            distribution["A"] += 1
-        elif percentage >= 80:
-            distribution["B"] += 1
-        elif percentage >= 70:
-            distribution["C"] += 1
-        elif percentage >= 60:
-            distribution["D"] += 1
-        else:
-            distribution["F"] += 1
-
-    return [
-    {"grade": grade, "count": count}
-    for grade, count in distribution.items()
-]
