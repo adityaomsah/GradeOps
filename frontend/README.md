@@ -1,16 +1,59 @@
-# React + Vite
+# GradeOps Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-powered automated grading platform frontend built with React 19, Vite, TypeScript, Tailwind CSS, and shadcn-style UI primitives.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + Vite + TypeScript
+- Tailwind CSS v4
+- React Router DOM
+- TanStack Query
+- Axios service layer
+- React Hook Form + Zod
+- Framer Motion
+- Recharts
+- Lucide React
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+cd C:\Users\SUNSA\gradeops
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Ensure the FastAPI backend is running at `http://127.0.0.1:8000` before using authenticated features.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Configure the API base URL in `.env`:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+## Scripts
+
+- `npm run dev` — start development server (port 5173)
+- `npm run build` — production build
+- `npm run preview` — preview production build
+
+## Architecture
+
+Feature-based structure under `src/features/` with shared UI in `src/components/`, API services in `src/services/`, and RBAC-protected routes in `src/routes/`.
+
+## API Integration
+
+All HTTP calls go through typed services (`authService`, `examService`, etc.). JWT refresh is handled in `src/services/api.ts`.
+
+If your backend paths differ from the assumed REST routes, update the corresponding service files to match your OpenAPI spec at `http://127.0.0.1:8000/docs`.
+
+## Roles
+
+- **Instructor** — full access
+- **Teaching Assistant** — uploads + reviews
+- **Student** — results portal
+
+## Keyboard Shortcuts
+
+- `Ctrl+K` — command palette
+- `G` then `D` — dashboard
+- `G` then `E` — exams
