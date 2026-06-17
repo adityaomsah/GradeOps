@@ -53,6 +53,8 @@ app.add_middleware(
 )
 
 
+from fastapi.staticfiles import StaticFiles
+
 app.include_router(upload_router)
 app.include_router(grade_router)
 app.include_router(rubrics_router)
@@ -63,6 +65,8 @@ app.include_router(exam_router)
 app.include_router(submissions_router)
 app.include_router(analytics_router)
 
+# Mount uploads directory to serve PDFs
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def home():

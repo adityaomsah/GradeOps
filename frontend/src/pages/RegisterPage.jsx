@@ -55,8 +55,8 @@ export default function RegisterPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold text-slate-800 mb-1">Register a User</h1>
-      <p className="text-sm text-slate-500 mb-6">
+      <h1 className="text-xl font-bold text-slate-800 dark:text-white mb-1">Register a User</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Create instructor, TA, student, or admin accounts.
       </p>
 

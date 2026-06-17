@@ -26,18 +26,31 @@ import UploadGradePage from "./pages/UploadGradePage";
 import ResultsPage from "./pages/ResultsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MyResultPage from "./pages/MyResultPage";
+import DashboardPage from "./pages/DashboardPage";
+import { ThemeProvider } from "./context/ThemeProvider";
+import { Toaster } from "react-hot-toast";
 
 function AppRoutes() {
   const { isAuthenticated, role } = useAuth();
 
   return (
     <>
+      <Toaster position="bottom-right" />
       <Navbar />
       <Routes>
         <Route
           path="/login"
           element={
-            isAuthenticated ? <Navigate to={roleHomePath(role)} replace /> : <LoginPage />
+            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          }
+        />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "instructor", "ta", "student"]}>
+              <DashboardPage />
+            </ProtectedRoute>
           }
         />
 
@@ -104,12 +117,11 @@ function AppRoutes() {
           }
         />
 
-        {/* Default route -> redirect based on auth state */}
         <Route
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to={roleHomePath(role)} replace />
+              <Navigate to="/dashboard" replace />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -121,7 +133,7 @@ function AppRoutes() {
           path="*"
           element={
             isAuthenticated ? (
-              <Navigate to={roleHomePath(role)} replace />
+              <Navigate to="/dashboard" replace />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -135,11 +147,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen bg-slate-50">
-          <AppRoutes />
-        </div>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+            <AppRoutes />
+          </div>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

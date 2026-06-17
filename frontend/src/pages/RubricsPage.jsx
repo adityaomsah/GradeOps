@@ -94,7 +94,7 @@ export default function RubricsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Rubrics</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Rubrics</h1>
         <p className="text-sm text-slate-500">
           {role === "instructor"
             ? "Upload a rubric PDF. The AI will parse it into structured grading criteria."

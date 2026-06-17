@@ -35,3 +35,27 @@ export async function gradeSubmission({ file, examId, rubricId, allAnswers = [] 
   });
   return response.data; // { score, justification, plagiarism_score, plagiarism_flag }
 }
+
+/**
+ * Trigger AI grading for multiple answer script PDFs in bulk.
+ *
+ * @param {Object} params
+ * @param {File[]} params.files - the PDF files
+ * @param {number} params.examId
+ * @param {number} params.rubricId
+ * @param {string[]} [params.allAnswers]
+ */
+export async function bulkGradeSubmissions({ files, examId, rubricId, allAnswers = [] }) {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append("files", file);
+  });
+  formData.append("exam_id", String(examId));
+  formData.append("rubric_id", String(rubricId));
+  formData.append("all_answers", JSON.stringify(allAnswers));
+
+  const response = await apiClient.post("/grade/bulk", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data; // { total, succeeded, failed, results }
+}

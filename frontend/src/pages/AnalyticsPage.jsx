@@ -10,6 +10,18 @@ import { getErrorMessage } from "../api/client";
 import Card from "../components/Card";
 import Select from "../components/Select";
 import Alert from "../components/Alert";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 export default function AnalyticsPage() {
   const [summary, setSummary] = useState(null);
@@ -71,7 +83,7 @@ export default function AnalyticsPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-800">Analytics</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Analytics</h1>
         <p className="text-sm text-slate-500">
           Overview of grading progress and score distributions.
         </p>
@@ -98,17 +110,15 @@ export default function AnalyticsPage() {
             {distribution.length === 0 || distribution.every((d) => d.count === 0) ? (
               <p className="text-sm text-slate-500">No graded submissions yet.</p>
             ) : (
-              <div className="flex items-end gap-4 h-40 pt-4">
-                {distribution.map((d) => (
-                  <div key={d.grade} className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-xs text-slate-500">{d.count}</span>
-                    <div
-                      className={`w-full rounded-t-md ${gradeColors[d.grade] || "bg-slate-400"}`}
-                      style={{ height: `${(d.count / maxCount) * 100}%`, minHeight: d.count > 0 ? "4px" : "0" }}
-                    />
-                    <span className="text-sm font-medium text-slate-600">{d.grade}</span>
-                  </div>
-                ))}
+              <div className="h-64 mt-4 w-full text-sm">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={distribution}>
+                    <XAxis dataKey="grade" stroke="#94a3b8" />
+                    <YAxis allowDecimals={false} stroke="#94a3b8" />
+                    <Tooltip cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             )}
           </Card>
@@ -146,29 +156,49 @@ export default function AnalyticsPage() {
                     <StatBox label="TA Pending" value={examAnalytics.ta_pending_count} highlight="amber" />
                   </div>
 
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase mb-2">
-                      Score Distribution (by range)
-                    </p>
-                    <div className="flex flex-col gap-1">
-                      {Object.entries(examAnalytics.score_distribution || {}).map(([range, count]) => (
-                        <div key={range} className="flex items-center gap-2 text-sm">
-                          <span className="w-24 text-slate-500">{range}</span>
-                          <div className="flex-1 bg-slate-100 rounded h-3 overflow-hidden">
-                            <div
-                              className="bg-indigo-500 h-3"
-                              style={{
-                                width: `${
-                                  examAnalytics.total_students
-                                    ? (count / examAnalytics.total_students) * 100
-                                    : 0
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          <span className="w-8 text-right text-slate-600">{count}</span>
-                        </div>
-                      ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-4">
+                        Score Distribution
+                      </p>
+                      <div className="h-48 text-sm">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={Object.entries(examAnalytics.score_distribution || {}).map(([range, count]) => ({ range, count }))}>
+                            <XAxis dataKey="range" stroke="#94a3b8" />
+                            <YAxis allowDecimals={false} stroke="#94a3b8" />
+                            <Tooltip cursor={{ fill: "rgba(148, 163, 184, 0.1)" }} contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                            <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-4 text-center">
+                        Plagiarism Status
+                      </p>
+                      <div className="h-48 text-sm">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: "Flagged", value: examAnalytics.plagiarism_flagged_count },
+                                { name: "Clear", value: examAnalytics.total_students - examAnalytics.plagiarism_flagged_count }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={70}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              <Cell fill="#ef4444" />
+                              <Cell fill="#10b981" />
+                            </Pie>
+                            <Tooltip contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                            <Legend verticalAlign="bottom" height={24} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                 </div>
