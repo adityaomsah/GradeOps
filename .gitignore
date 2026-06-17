@@ -223,6 +223,10 @@ backend/ocr/images/*
 !backend/ocr/uploads/.gitkeep
 !backend/ocr/images/.gitkeep
 
+# Ignore root uploads content but keep the folder
+uploads/*
+!uploads/.gitkeep
+
 *.db
 node_modules/
 dist/
