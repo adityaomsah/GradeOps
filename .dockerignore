@@ -1,0 +1,12 @@
+.git
+.gitignore
+venv/
+env/
+__pycache__/
+*.pyc
+.env
+frontend/
+node_modules/
+dist/
+tests/
+docs/

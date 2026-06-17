@@ -20,7 +20,6 @@ langchain-community
 langchain-google-genai
 
 # Database
-postgresql
 sqlalchemy
 psycopg2-binary
 
