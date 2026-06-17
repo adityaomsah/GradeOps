@@ -57,7 +57,7 @@ GradeOps/
 
 ## 🚀 Deployment
 
-- **Backend:** Configured via `Procfile` for one-click deployment on **Railway**.
+- **Backend:** Configured via `Procfile` for one-click deployment on **Render**.
 - **Frontend:** Configured via `vercel.json` for seamless routing and deployment on **Vercel**.
 
 ---
