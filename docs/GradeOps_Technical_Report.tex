@@ -1,0 +1,566 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{microtype}
+
+% ── Colors ────────────────────────────────────────────────────────────────────
+\definecolor{indigo}{RGB}{79, 70, 229}
+\definecolor{slate}{RGB}{71, 85, 105}
+\definecolor{emerald}{RGB}{16, 185, 129}
+\definecolor{red}{RGB}{220, 38, 38}
+\definecolor{amber}{RGB}{245, 158, 11}
+\definecolor{codebg}{RGB}{248, 250, 252}
+\definecolor{codeframe}{RGB}{226, 232, 240}
+
+% ── Code listing style ────────────────────────────────────────────────────────
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{slate}\itshape,
+  frame=single,
+  rulecolor=\color{codeframe},
+  keywordstyle=\color{indigo}\bfseries,
+  stringstyle=\color{emerald},
+  numberstyle=\tiny\color{slate},
+  numbers=left,
+  showstringspaces=false,
+  tabsize=2,
+}
+
+% ── Hyperref setup ────────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=indigo,
+  urlcolor=indigo,
+  citecolor=indigo,
+  pdftitle={GradeOps Technical Report},
+  pdfauthor={Aditya Om Sah, Mallhar Totey},
+}
+
+% ── Page style ────────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\color{slate}\small GradeOps — Technical Report}
+\lhead{\color{slate}\small IIT Guwahati Coding Club}
+\rfoot{\color{slate}\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{codeframe}\leaders\hrule height \headrulewidth\hfill}}
+
+% ── Section title style ───────────────────────────────────────────────────────
+\titleformat{\section}{\large\bfseries\color{indigo}}{}{0em}{}[\color{codeframe}\hrule]
+\titleformat{\subsection}{\normalsize\bfseries\color{slate}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\itshape\color{slate}}{}{0em}{}
+
+% ── tcolorbox styles ──────────────────────────────────────────────────────────
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{infobox}[1][]{
+  colback=indigo!5, colframe=indigo!40, fonttitle=\bfseries,
+  title=#1, breakable, arc=4pt
+}
+\newtcolorbox{errorbox}[1][]{
+  colback=red!5, colframe=red!40, fonttitle=\bfseries,
+  title=#1, breakable, arc=4pt
+}
+\newtcolorbox{successbox}[1][]{
+  colback=emerald!5, colframe=emerald!40, fonttitle=\bfseries,
+  title=#1, breakable, arc=4pt
+}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+% ══════════════════════════════════════════════════════════════════════════════
+
+% ── Title Page ────────────────────────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\vspace*{1cm}
+
+{\Huge\bfseries\color{indigo} GradeOps}\\[0.4cm]
+{\Large\color{slate} AI-Powered Human-in-the-Loop Exam Grading Pipeline}\\[0.8cm]
+
+\noindent\rule{\textwidth}{0.5pt}\\[0.8cm]
+
+{\large\bfseries Technical Report}\\[0.3cm]
+{\normalsize Even Semester Projects 2026}\\[0.2cm]
+{\normalsize IIT Guwahati Coding Club}\\[1.2cm]
+
+\begin{tabular}{ll}
+\textbf{Team Members:} & Aditya Om Sah \\
+                        & Mallhar Totey \\[0.4cm]
+\textbf{Repository:}    & \url{https://github.com/adityaomsah/GradeOps} \\[0.4cm]
+\textbf{Live Backend:}  & \url{https://gradeops-backend-06ww.onrender.com} \\[0.2cm]
+\textbf{Live Frontend:} & \url{https://grade-jguwjxw0z-adityaomsah1.vercel.app} \\[0.4cm]
+\textbf{Date:}          & June 2026 \\
+\end{tabular}
+
+\vfill
+
+\begin{infobox}[Abstract]
+GradeOps is a Human-in-the-Loop (HITL) AI grading pipeline that automates the evaluation of handwritten exam scripts using Vision-Language Models (VLMs) and Agentic Large Language Models. The system allows instructors to upload bulk exam scans and JSON rubrics, automatically extract and transcribe handwritten answers, award partial credit with structured justifications, flag plagiarism, and push AI-proposed grades to a TA review dashboard for final approval or override. This report documents the problem statement, technical architecture, implementation details, challenges encountered, and future roadmap.
+\end{infobox}
+
+\end{titlepage}
+
+% ── Table of Contents ─────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Problem Statement and Context}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{The Problem}
+
+Grading handwritten exams in university settings is a time-consuming, labour-intensive, and inconsistency-prone process. At institutions like IIT Guwahati with large class sizes, evaluating hundreds of answer scripts manually results in:
+
+\begin{itemize}[leftmargin=*, noitemsep]
+  \item \textbf{Inconsistency:} Different TAs applying the same rubric differently across scripts.
+  \item \textbf{Fatigue-induced bias:} Graders become less rigorous after evaluating many scripts in succession.
+  \item \textbf{Slow turnaround:} Results taking days or weeks to be published.
+  \item \textbf{Lack of traceability:} No structured audit trail for score changes or TA overrides.
+  \item \textbf{Plagiarism blind spots:} Manual detection of academic dishonesty is unreliable at scale.
+\end{itemize}
+
+\subsection{Project Specification}
+
+The Even Semester Projects 2026 brief from IIT Guwahati Coding Club specified the following goals for GradeOps:
+
+\begin{infobox}[Official Goals]
+\begin{enumerate}[leftmargin=*, noitemsep]
+  \item A web portal to upload bulk exam scans (PDFs) and define granular grading rubrics.
+  \item Role-Based Access Control (Instructors vs.\ TAs).
+  \item Specialized OCR/Vision models (Nougat/Qwen-VL) to extract handwritten answers and store them in cloud storage.
+  \item An Agentic LLM pipeline to:
+    \begin{itemize}[noitemsep]
+      \item Award partial credit based on strict rubric conditions.
+      \item Generate structured textual justifications for each score.
+      \item Flag highly similar answers across papers for plagiarism.
+    \end{itemize}
+  \item A high-throughput review dashboard with keyboard shortcuts for rapid TA approvals and overrides.
+\end{enumerate}
+\end{infobox}
+
+\textbf{Prescribed tech stack:} Python, PyTorch, Hugging Face (Nougat/Qwen-VL), LangChain, LangGraph, React.js, FastAPI, PostgreSQL.
+
+\subsection{Team Division}
+
+The project was divided as follows:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Component} & \textbf{Owner} & \textbf{Notes} \\
+\midrule
+Backend API (FastAPI) & Aditya Sah & All 16 endpoints \\
+ML/Grading Pipeline & Aditya Sah & LangGraph + Gemini 2.0 Flash \\
+Plagiarism Detection & Aditya Sah & Jaccard + Cosine hybrid \\
+Database Models & Mallhar Totey & SQLAlchemy ORM \\
+React Frontend & Mallhar Totey & Full dashboard \\
+Deployment & Both & Render + Vercel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{What We Built}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{System Overview}
+
+GradeOps implements a complete Human-in-the-Loop grading pipeline. Figure \ref{fig:pipeline} illustrates the high-level data flow.
+
+\begin{infobox}[High-Level Pipeline]
+\texttt{PDF Upload} $\rightarrow$ \texttt{OCR Extraction} $\rightarrow$ \texttt{Plagiarism Check} $\rightarrow$ \texttt{LLM Grading} $\rightarrow$ \texttt{TA Review Dashboard} $\rightarrow$ \texttt{Results}
+\end{infobox}
+
+\subsection{Features Implemented}
+
+\subsubsection{Authentication and Role-Based Access Control}
+
+A four-tier RBAC system was implemented using JWT (JSON Web Tokens) via \texttt{python-jose} and \texttt{passlib} with bcrypt password hashing.
+
+\begin{center}
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Role} & \textbf{Permissions} \\
+\midrule
+\textbf{Admin} & Register all user types; system-level management \\
+\textbf{Instructor} & Create exams and rubrics; view analytics, results, and history; approve/override grades \\
+\textbf{TA} & Upload exam PDFs; trigger grading (single and bulk); view and export results; approve/override grades \\
+\textbf{Student} & View own graded result only \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Tokens expire after 24 hours. The first admin is auto-created from environment variables on server startup using the FastAPI \texttt{lifespan} event (replacing the deprecated \texttt{@app.on\_event} pattern).
+
+\subsubsection{OCR Pipeline}
+
+Answer scripts are uploaded as PDFs and converted to page images using \texttt{pdf2image} (backed by \texttt{poppler}). Each page image is passed to a vision extractor that returns structured JSON:
+
+\begin{lstlisting}[language=Python, caption={Vision Extractor return format}]
+{
+  "name": "John Doe",
+  "roll_no": "101",
+  "raw_text": "Dynamic memory allocation uses malloc()..."
+}
+\end{lstlisting}
+
+\textbf{Dual-mode implementation:}
+\begin{itemize}[noitemsep]
+  \item \textbf{Local (GPU):} Qwen2-VL-2B-Instruct via Hugging Face Transformers — implements the exact VLM pipeline prescribed in the project spec, with structured JSON prompting, markdown fence stripping, and graceful JSON fallback.
+  \item \textbf{Deployment (CPU):} Gemini Vision API via \texttt{langchain-google-genai} — functionally equivalent, no GPU required.
+\end{itemize}
+
+\subsubsection{LangGraph Grading Pipeline}
+
+The grading pipeline is implemented as a directed acyclic graph using LangGraph with conditional routing:
+
+\begin{lstlisting}[language=Python, caption={GradeState TypedDict structure}]
+class GradeState(TypedDict):
+    student_name: str
+    student_roll_no: str
+    answer_script: str
+    rubric: str          # JSON-encoded rubric
+    score: float
+    justification: str
+    all_answers: List[str]  # for plagiarism
+    plagiarism_score: float
+    plagiarism_flag: bool
+\end{lstlisting}
+
+Pipeline flow:
+\begin{enumerate}[noitemsep]
+  \item \textbf{\texttt{plagiarism\_check}}: Computes Jaccard similarity and cosine similarity (via \texttt{sentence-transformers}, model \texttt{all-MiniLM-L6-v2}) against all other submitted answers. Answers shorter than 50 words skip the check. Flag is raised if \texttt{jaccard > 0.6 AND cosine > 0.85}.
+  \item \textbf{Conditional routing}: Flagged answers route to \texttt{human\_review\_needed} (score set to $-1$, justification contains warning). Clean answers proceed to grading.
+  \item \textbf{\texttt{grade\_answer}}: Gemini 2.0 Flash evaluates the answer against rubric criteria and returns a structured \texttt{GradingResponse} Pydantic object.
+  \item \textbf{\texttt{generate\_justification}}: Gemini generates a free-text explanation of the awarded marks.
+\end{enumerate}
+
+\subsubsection{Plagiarism Detection}
+
+The hybrid Jaccard + Cosine approach was chosen after the team identified that cosine similarity alone produces false positives (semantically similar but independently written answers). The dual-threshold system significantly reduces false flags:
+
+\begin{equation}
+\text{flag} = \begin{cases} \text{True} & \text{if } J(A_i, A_j) > 0.6 \;\land\; \cos(A_i, A_j) > 0.85 \\ \text{False} & \text{otherwise} \end{cases}
+\end{equation}
+
+where $J$ is Jaccard similarity over word sets and $\cos$ is cosine similarity over sentence embeddings.
+
+\subsubsection{API Endpoints}
+
+The backend exposes 19 REST API endpoints:
+
+\begin{center}
+\footnotesize
+\begin{tabular}{llll}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Roles} & \textbf{Purpose} \\
+\midrule
+\texttt{/login} & POST & All & JWT token issuance \\
+\texttt{/register} & POST & Admin & User account creation \\
+\texttt{/upload-pdf/} & POST & TA & PDF upload + image conversion \\
+\texttt{/rubric} & POST & Instructor & Rubric PDF upload + LLM parsing \\
+\texttt{/rubric/\{id\}} & GET & Instructor, TA & Rubric retrieval \\
+\texttt{/exam} & POST & Instructor & Exam creation \\
+\texttt{/exam} & GET & Instructor, TA & List all exams \\
+\texttt{/exam/\{id\}} & GET & Instructor, TA & Single exam retrieval \\
+\texttt{/grade} & POST & TA & Single PDF grading \\
+\texttt{/grade/bulk} & POST & TA & Multi-PDF batch grading \\
+\texttt{/results} & GET & Instructor, TA & All graded results \\
+\texttt{/results/\{roll\_no\}} & GET & All & Student result (own only for student) \\
+\texttt{/results/\{id\}/history} & GET & Instructor, TA & Grade audit trail \\
+\texttt{/results/export/csv} & GET & Instructor, TA & CSV download \\
+\texttt{/feedback} & POST & Instructor, TA & Approve or override grade \\
+\texttt{/submissions} & GET/POST & Instructor, TA & Submission tracking \\
+\texttt{/submissions/\{id\}} & GET/PATCH & Instructor, TA & Single submission \\
+\texttt{/analytics/dashboard} & GET & Instructor, TA & Global stats summary \\
+\texttt{/analytics/exam/\{id\}} & GET & Instructor, TA & Per-exam analytics \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Database Schema}
+
+Six SQLAlchemy models back the system, targeting PostgreSQL (Neon) in production and SQLite locally:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{User}: \texttt{id, email, password\_hash, role, roll\_no}
+  \item \textbf{Exam}: \texttt{id, course\_name, course\_code, exam\_type, total\_marks}
+  \item \textbf{Rubric}: \texttt{id, question, max\_marks, criteria (JSON)}
+  \item \textbf{Grade}: \texttt{id, exam\_id, rubric\_id, student\_name, student\_roll\_no, score, justification, plagiarism\_score, plagiarism\_flag, ta\_reviewed, ta\_override\_score, uploaded\_pdf\_filename}
+  \item \textbf{GradeHistory}: \texttt{id, grade\_id, old\_score, new\_score, changed\_by, reason, action, timestamp}
+  \item \textbf{Submission}: \texttt{id, exam\_id, student\_roll\_no, file\_url, status, grade\_id, score\_cache, created\_at}
+\end{itemize}
+
+\subsubsection{Audit Trail}
+
+Every grade change is logged to \texttt{GradeHistory} with the action type (\texttt{ai\_graded}, \texttt{approved}, \texttt{overridden}), before/after scores, reviewer identity, timestamp, and justification. This enables full traceability for academic integrity purposes.
+
+\subsubsection{Frontend}
+
+The React frontend (Vite + Tailwind CSS) provides:
+\begin{itemize}[noitemsep]
+  \item \textbf{Dark/Light/System theme} switcher with localStorage persistence.
+  \item \textbf{Role-aware navigation}: Different pages visible per role.
+  \item \textbf{Dashboard} with live analytics cards (total exams, graded submissions, plagiarism flags, pending reviews).
+  \item \textbf{Exam management}: Create and list exams (Instructor).
+  \item \textbf{Rubric portal}: Upload PDFs, view parsed criteria, session-cached recent rubrics.
+  \item \textbf{Upload \& Grade}: Single PDF and bulk multi-PDF upload with per-file result display.
+  \item \textbf{Results dashboard}: Filter by pending/flagged/reviewed, inline approve/override with justification, audit history panel.
+  \item \textbf{Analytics}: Global dashboard summary, per-exam score stats, TA review progress bars.
+  \item \textbf{Student result page}: Score display with status indicator.
+  \item \textbf{Admin register page}: Create all user types with roll number support for students.
+\end{itemize}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Technical Architecture}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Backend Stack}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Layer} & \textbf{Technology} \\
+\midrule
+Web Framework & FastAPI (Python 3.11+) \\
+Agent Orchestration & LangGraph 0.1+ \\
+LLM & Gemini 2.0 Flash (\texttt{langchain-google-genai}) \\
+Embeddings & \texttt{sentence-transformers} (all-MiniLM-L6-v2) \\
+OCR (Local) & Qwen2-VL-2B-Instruct (Hugging Face) \\
+OCR (Deploy) & Gemini Vision API \\
+Database ORM & SQLAlchemy 2.0 \\
+Database (Local) & SQLite \\
+Database (Production) & Neon PostgreSQL (serverless) \\
+Authentication & JWT (\texttt{python-jose}) + \texttt{passlib}/\texttt{bcrypt} \\
+PDF Processing & \texttt{pdf2image} + \texttt{poppler} \\
+Data Validation & Pydantic v2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Frontend Stack}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Layer} & \textbf{Technology} \\
+\midrule
+Framework & React 18 (Vite) \\
+Styling & Tailwind CSS 3 \\
+Routing & React Router v6 \\
+HTTP Client & Axios (with interceptors) \\
+State Management & React Context API \\
+Theme & \texttt{class} dark mode strategy \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Deployment Architecture}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Service} & \textbf{Platform} & \textbf{URL} \\
+\midrule
+Frontend (React) & Vercel & \texttt{grade-jguwjxw0z-adityaomsah1.vercel.app} \\
+Backend (FastAPI) & Render & \texttt{gradeops-backend-06ww.onrender.com} \\
+Database & Neon (PostgreSQL) & Serverless pool \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Errors Encountered and How We Handled Them}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Error 1: bcrypt / passlib Version Incompatibility}
+
+\begin{errorbox}[Error]
+\texttt{ValueError: password cannot be longer than 72 bytes} and \texttt{AttributeError: module 'bcrypt' has no attribute '\_\_about\_\_'}
+\end{errorbox}
+
+\textbf{Root cause:} \texttt{passlib} 1.7.x was built against older \texttt{bcrypt} versions and reads \texttt{bcrypt.\_\_about\_\_.\_\_version\_\_} for version detection. Newer \texttt{bcrypt} versions removed this attribute, causing passlib to fall into an error state that also triggered the 72-byte limit incorrectly.
+
+\begin{successbox}[Fix]
+Pin \texttt{bcrypt==4.0.1} in \texttt{requirements.txt}. This is the last version fully compatible with \texttt{passlib} 1.7.4 without requiring patching. The constraint is documented with a comment in requirements.
+\end{successbox}
+
+\subsection{Error 2: \texttt{datetime.utcnow()} Deprecation}
+
+\begin{errorbox}[Error]
+\texttt{DeprecationWarning: datetime.utcnow() is deprecated} in JWT token generation and \texttt{GradeHistory} timestamps.
+\end{errorbox}
+
+\textbf{Root cause:} Python 3.12+ deprecated \texttt{datetime.utcnow()} in favour of timezone-aware datetimes.
+
+\begin{successbox}[Fix]
+Replaced all occurrences with \texttt{datetime.now(timezone.utc)} and imported \texttt{timezone} from \texttt{datetime}. For SQLAlchemy columns, used \texttt{server\_default=func.now()} with \texttt{DateTime(timezone=True)} to delegate timestamp generation to the database.
+\end{successbox}
+
+\subsection{Error 3: \texttt{@app.on\_event("startup")} Deprecation}
+
+\begin{errorbox}[Error]
+FastAPI emitted deprecation warnings for \texttt{@app.on\_event("startup")} in newer versions.
+\end{errorbox}
+
+\textbf{Root cause:} FastAPI moved to the \texttt{lifespan} context manager pattern as the canonical way to handle startup/shutdown events.
+
+\begin{successbox}[Fix]
+Migrated to \texttt{@asynccontextmanager} lifespan pattern:
+\begin{lstlisting}[language=Python]
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: create tables, seed admin
+    models.BaseClass.metadata.create_all(bind=engine)
+    _seed_admin(next(get_db()))
+    yield  # app runs here
+    # shutdown cleanup (if needed)
+
+app = FastAPI(title="GradeOps API", lifespan=lifespan)
+\end{lstlisting}
+\end{successbox}
+
+\subsection{Error 4: Neon PostgreSQL + psycopg2 \texttt{Unknown PG numeric type: 3802}}
+
+\begin{errorbox}[Error]
+\texttt{sqlalchemy.exc.InvalidRequestError: Unknown PG numeric type: 3802} when querying the \texttt{submissions} table through Neon's connection pooler.
+\end{errorbox}
+
+\textbf{Root cause:} OID 3802 is \texttt{jsonb}. Neon uses PgBouncer in transaction-mode pooling, which can return stale prepared statement plans from a previous connection's type cache that reference \texttt{jsonb} (used in the \texttt{Rubric.criteria} column). When a new connection handles a query for a different table, psycopg2's local type registry doesn't recognise the OID from the cached plan.
+
+\begin{successbox}[Fix]
+Added \texttt{pool\_pre\_ping=True} and \texttt{pool\_recycle=300} to the SQLAlchemy engine. For a more robust long-term fix, the \texttt{DATABASE\_URL} for Neon should append \texttt{?options=-c\%20plan\_cache\_mode=force\_custom\_statement} to disable prepared statement caching. Alternatively, switching to \texttt{psycopg} v3 (instead of \texttt{psycopg2-binary}) handles Neon's pooler correctly out of the box.
+\end{successbox}
+
+\subsection{Error 5: Swagger UI OAuth2 Form vs JSON Body Mismatch}
+
+\begin{errorbox}[Error]
+\texttt{422 Unprocessable Entity} when using the Swagger UI Authorize button with the \texttt{/login} endpoint.
+\end{errorbox}
+
+\textbf{Root cause:} \texttt{OAuth2PasswordBearer} in FastAPI's Swagger UI sends login credentials as \texttt{application/x-www-form-urlencoded} with a \texttt{username} field, but the original \texttt{/login} implementation used a Pydantic JSON body with an \texttt{email} field.
+
+\begin{successbox}[Fix]
+Changed \texttt{/login} to use \texttt{OAuth2PasswordRequestForm = Depends()} which reads \texttt{username} from form data. The \texttt{username} field still receives email values — the naming is a FastAPI/OAuth2 convention. This made the Swagger UI Authorize button work correctly and aligned with OAuth2 standards.
+\end{successbox}
+
+\subsection{Error 6: CORS Blocking Frontend Requests}
+
+\begin{errorbox}[Error]
+\texttt{Access to XMLHttpRequest at 'http://127.0.0.1:8000/...' from origin 'http://localhost:5173' has been blocked by CORS policy.}
+\end{errorbox}
+
+\textbf{Root cause:} The FastAPI backend did not include \texttt{CORSMiddleware}, so all cross-origin requests from the React dev server were rejected by the browser.
+
+\begin{successbox}[Fix]
+Added \texttt{CORSMiddleware} to \texttt{main.py} with explicit allowed origins for both local development (\texttt{localhost:5173}) and the production Vercel domain.
+\end{successbox}
+
+\subsection{Error 7: Qwen2-VL Model Loading on CPU}
+
+\begin{errorbox}[Error]
+Server tried to download and load the 4.42 GB Qwen2-VL model on startup (with \texttt{device\_map="auto"} mapping to CPU), causing extremely slow startup and OOM errors on deployment machines.
+\end{errorbox}
+
+\textbf{Root cause:} The \texttt{vision\_extractor.py} import was at the module level, triggering model download on every server start regardless of environment.
+
+\begin{successbox}[Fix]
+For development: comment out all model loading code, use a mock function returning static test data. For production deployment: implement \texttt{vision\_extractor\_gemini.py} using the Gemini Vision API (already available via \texttt{GEMINI\_API\_KEY}), which requires no local GPU. The original Qwen2-VL implementation is preserved and documented for GPU-equipped environments.
+\end{successbox}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Future Goals}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Short-Term (Next Month)}
+
+\begin{enumerate}[leftmargin=*, noitemsep]
+  \item \textbf{Cloudinary/S3 Integration}: Store uploaded PDF images in cloud storage and expose URLs in the Grade record, enabling the TA dashboard to display the original answer scan side-by-side with the AI grade — a core feature from the project spec not yet fully implemented.
+  \item \textbf{Keyboard Shortcuts in TA Dashboard}: Add \texttt{A} to approve and \texttt{O} to open override dialog for rapid review — as specified in the project brief.
+  \item \textbf{Grade Distribution Analytics}: Implement \texttt{GET /analytics/grade-distribution} returning A/B/C/D/F bucketed counts across all exams, with frontend visualisation.
+  \item \textbf{psycopg v3 Migration}: Migrate from \texttt{psycopg2-binary} to \texttt{psycopg} (v3) for better Neon compatibility and native async support.
+\end{enumerate}
+
+\subsection{Medium-Term (Next Quarter)}
+
+\begin{enumerate}[leftmargin=*, noitemsep]
+  \item \textbf{Async Grading Queue}: Introduce Celery + Redis for background grading jobs, returning a \texttt{job\_id} immediately and pushing status updates via WebSocket or polling. This eliminates HTTP timeout issues for large batches.
+  \item \textbf{Rubric Versioning}: Support multiple rubric versions per question, allowing instructors to refine criteria mid-session without losing historical grading context.
+  \item \textbf{Bulk PDF Splitting}: Automatically segment a combined PDF (all students in one file) into per-student scripts using roll number detection from the OCR output.
+  \item \textbf{Email Notifications}: Notify students when their results are published and TAs when new submissions arrive for review.
+  \item \textbf{Mobile-Responsive TA Dashboard}: Optimise the review interface for tablet use so TAs can grade on the go.
+\end{enumerate}
+
+\subsection{Long-Term (Production Deployment)}
+
+\begin{enumerate}[leftmargin=*, noitemsep]
+  \item \textbf{GPU Inference Service}: Deploy Qwen2-VL on a GPU-enabled instance (AWS EC2 g4dn.xlarge or RunPod) and expose it as a microservice, replacing the Gemini Vision fallback for cost efficiency at scale.
+  \item \textbf{Multi-Subject Rubric Library}: Allow instructors to build and reuse rubric templates across semesters.
+  \item \textbf{LMS Integration}: Connect with Moodle or the institute's existing Learning Management System via webhooks for automatic grade sync.
+  \item \textbf{Dispute Resolution Portal}: Allow students to formally contest AI or TA grades through a structured re-evaluation workflow.
+  \item \textbf{Differential Privacy}: Aggregate analytics computed with differential privacy guarantees to protect individual student data.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Conclusion}
+% ══════════════════════════════════════════════════════════════════════════════
+
+GradeOps successfully demonstrates the feasibility of AI-assisted exam grading with robust human oversight. Within the Even Semester 2026 project window, the team delivered a full-stack production-deployed system encompassing a 19-endpoint FastAPI backend, a LangGraph-powered agentic grading pipeline, hybrid plagiarism detection, a four-role RBAC system, a complete React dashboard with dark mode, and live deployment on Render and Vercel.
+
+The project exceeded the original specification's minimum requirements in several areas — notably the addition of a full audit trail (\texttt{GradeHistory}), CSV export, bulk grading, submission tracking, and analytics endpoints not originally prescribed. The architectural decisions made throughout (hybrid plagiarism detection, optional submission tracking layer, dual OCR modes) reflect real-world engineering trade-offs between correctness, deployment practicality, and development velocity.
+
+The codebase is open source at \url{https://github.com/adityaomsah/GradeOps}.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\appendix
+\section{API Quick Reference}
+% ══════════════════════════════════════════════════════════════════════════════
+
+All endpoints are accessible via the deployed backend at\\
+\url{https://gradeops-backend-06ww.onrender.com/docs} (Swagger UI).
+
+\textbf{Authentication:} All endpoints except \texttt{POST /login} require\\
+\texttt{Authorization: Bearer <token>} header.
+
+\section{Environment Variables}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{lstlisting}[language=bash, caption={Required .env variables}]
+# Database
+DATABASE_URL=postgresql://user:pass@host/dbname
+
+# JWT
+SECRET_KEY=<random 64-char hex string>
+
+# LLM
+GEMINI_API_KEY=<your Gemini API key>
+
+# First admin bootstrap
+ADMIN_EMAIL=admin@gradeops.com
+ADMIN_PASSWORD=<secure password>
+\end{lstlisting}
+
+\end{document}
